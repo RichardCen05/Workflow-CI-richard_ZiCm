@@ -1,0 +1,2 @@
+Target Docker Hub image jika secrets tersedia:
+docker.io/richardcen05/smsml-richard-zicm:latest

@@ -1,0 +1,50 @@
+name: MLflow Project CI
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  train-model:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    defaults:
+      run:
+        working-directory: MLProject
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow==2.19.0 pandas==2.2.2 numpy==1.26.4 scikit-learn==1.6.1 matplotlib==3.9.2
+      - name: Run MLflow Project
+        run: mlflow run . --env-manager=local
+      - name: Upload MLflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-training-artifacts
+          path: MLProject/mlruns
+      - name: Check Docker Hub secrets
+        id: docker_secrets
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build Docker image from MLflow model
+        if: steps.docker_secrets.outputs.has_secrets == 'true'
+        run: |
+          MODEL_URI=$(find mlruns -path '*/artifacts/model' -type d | head -n 1)
+          mlflow models build-docker -m "$MODEL_URI" -n "$DOCKERHUB_USERNAME/smsml-richard-zicm:latest"
+      - name: Push Docker image
+        if: steps.docker_secrets.outputs.has_secrets == 'true'
+        run: |
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          docker push "$DOCKERHUB_USERNAME/smsml-richard-zicm:latest"

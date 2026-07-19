@@ -1,0 +1,12 @@
+name: smsml-richard-zicm
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12.7
+  - pip
+  - pip:
+      - mlflow==2.19.0
+      - pandas==2.2.2
+      - numpy==1.26.4
+      - scikit-learn==1.6.1
+      - matplotlib==3.9.2
