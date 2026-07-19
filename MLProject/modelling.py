@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -39,10 +40,16 @@ def load_data():
 def train_model():
     X_train, X_test, y_train, y_test = load_data()
     ARTIFACT_DIR.mkdir(exist_ok=True)
-    mlflow.set_tracking_uri(f"file:{TRACKING_DIR}")
-    mlflow.set_experiment("SMSML_richard_ZiCm_BreastCancer")
+    project_run_id = os.environ.get("MLFLOW_RUN_ID")
+    if project_run_id:
+        run_context = mlflow.start_run(run_id=project_run_id)
+    else:
+        mlflow.set_tracking_uri(f"file:{TRACKING_DIR}")
+        mlflow.set_experiment("SMSML_richard_ZiCm_BreastCancer")
+        run_context = mlflow.start_run(run_name="manual_tuning")
 
-    with mlflow.start_run(run_name="manual_tuning"):
+    with run_context:
+        mlflow.set_tag("mlflow.runName", "manual_tuning")
         # Manual logging dilakukan setelah evaluasi model.
         param_grid = {
             "n_estimators": [80, 120],
